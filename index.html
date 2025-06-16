@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Booking App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6; /* bg-gray-100 - Light gray background for the entire page */
+        }
+        /* Hide scrollbar for filter buttons */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        /* Style for active navigation item */
+        .nav-item.active {
+            color: #4f46e5; /* indigo-600 */
+        }
+        .nav-item.active svg {
+            fill: #4f46e5; /* indigo-600 */
+        }
+        .chat-message-bubble {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 1.25rem;
+            margin-bottom: 0.5rem;
+            word-wrap: break-word;
+        }
+        .chat-message-bubble.user {
+            background-color: #4f46e5; /* indigo-600 */
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 0.25rem; /* rounded-br-sm */
+        }
+        .chat-message-bubble.ai {
+            background-color: #e2e8f0; /* gray-200 */
+            color: #1a202c; /* gray-900 */
+            align-self: flex-start;
+            border-bottom-left-radius: 0.25rem; /* rounded-bl-sm */
+        }
+        /* Custom category button styling for grid */
+        .category-grid-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            border-radius: 0.75rem; /* rounded-xl */
+            background-color: #ffffff; /* bg-white */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+            border: 1px solid #e5e7eb; /* border-gray-200 */
+            transition: all 0.2s ease-in-out;
+            text-align: center;
+            cursor: pointer;
+        }
+        .category-grid-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+        }
+        .category-grid-item.active {
+            border-color: #4f46e5; /* indigo-600 */
+            background-color: #e0e7ff; /* indigo-50 */
+            color: #3730a3; /* indigo-900 */
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center pb-16"> <!-- Added pb-16 for nav bar space -->
+    <div id="app" class="w-full max-w-lg flex flex-col min-h-screen bg-white rounded-xl shadow-lg"> <!-- Added bg-white and shadow-lg to app container -->
+        <!-- Header (Remains at the top of the visible screen) -->
+        <header class="w-full bg-white rounded-xl p-4 mb-6 flex flex-col z-10 sticky top-0"> <!-- Removed shadow-md here as it's on the main app container -->
+            <h1 class="text-3xl font-bold text-center text-indigo-700 mb-2">
+                Service Booking
+            </h1>
+            <div class="flex items-center justify-center text-gray-600 mb-4">
+                <!-- MapPin Icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-1"><path d="M12 18.312L6.155 12.467C2.983 9.324 2.983 4.168 6.155 1.025S14.845 1.025 18.017 4.168 18.017 9.324 14.845 12.467L12 18.312z"></path><circle cx="12" cy="7.5" r="2.5"></circle></svg>
+                <span id="current-location" class="font-semibold">Ghaziabad</span>
+            </div>
+            <!-- Search Input Reintroduced -->
+            <input
+                type="text"
+                id="search-input"
+                placeholder="Search service or provider..."
+                class="w-full p-3 pl-10 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500 transition duration-200 ease-in-out shadow-sm"
+                style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\' class=\'lucide lucude-search\'%3E%3Ccircle cx=\'11\' cy=\'11\' r=\'8\'%3E%3C/circle%3E%3Cpath d=\'m21 21-4.3-4.3\'%3E%3C/path%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: left 10px center; background-size: 20px;"
+            />
+        </header>
+
+        <!-- User ID Display -->
+        <div id="user-id-display" class="w-full max-w-lg bg-indigo-100 text-indigo-800 text-sm p-3 rounded-xl mb-6 text-center shadow-sm hidden mx-auto px-4">
+            Your User ID: <span id="user-id-value" class="font-mono break-all"></span>
+        </div>
+
+        <!-- Main Content Area -->
+        <div id="content-area" class="flex-grow w-full px-4 sm:px-6 overflow-y-auto">
+            <!-- Home Page -->
+            <div id="home-page" class="page active">
+                <!-- Banner Slider Placeholder -->
+                <div class="w-full h-40 bg-gray-300 rounded-xl shadow-md mb-6 flex items-center justify-center text-gray-700 font-bold text-xl overflow-hidden">
+                    <img src="https://placehold.co/400x160/60A5FA/FFFFFF?text=Ad+Banner" alt="Promotional Banner" class="w-full h-full object-cover rounded-xl">
+                </div>
+
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Categories</h2>
+                <div id="category-grid" class="grid grid-cols-3 gap-4 mb-6">
+                    <!-- Category grid items will be rendered here by JS -->
+                </div>
+
+                <h2 id="provider-list-title" class="text-xl font-semibold text-gray-700 mb-4"></h2>
+                <div id="provider-list" class="space-y-4">
+                    <!-- Provider cards will be rendered here by JS -->
+                </div>
+                <p id="no-providers-message" class="text-center text-gray-500 py-8 hidden">No providers found matching your criteria.</p>
+            </div>
+
+            <!-- Provider Detail Page -->
+            <div id="detail-page" class="page hidden">
+                <button id="back-to-home-btn" class="flex items-center text-indigo-600 hover:text-indigo-800 font-semibold mb-4 -ml-2">
+                    <!-- ArrowLeft Icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 mr-1"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
+                    Back to Home
+                </button>
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+                    <img id="detail-cover-image" src="" alt="Provider Cover" class="w-full h-56 object-cover" onerror="this.onerror=null; this.src='https://placehold.co/600x300/cccccc/333333?text=Service+Provider';">
+                    <div class="p-4">
+                        <div class="flex items-center mb-3">
+                             <!-- Logo Placeholder (can be a smaller version of cover image or a distinct logo) -->
+                            <img id="detail-logo-image" src="" alt="Provider Logo" class="w-16 h-16 rounded-full border-2 border-white -mt-10 mr-4 shadow-md bg-gray-200 object-cover" onerror="this.onerror=null; this.src='https://placehold.co/60x60/dddddd/666666?text=Logo';">
+                            <h2 id="detail-provider-name" class="text-3xl font-bold text-gray-900 flex-grow"></h2>
+                        </div>
+                       
+                        <div class="flex items-center text-yellow-500 text-base mb-2">
+                            <!-- Star Icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 fill-current mr-1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            <span id="detail-rating"></span> (<span id="detail-reviews"></span> reviews)
+                        </div>
+                        <p id="detail-description" class="text-gray-700 text-sm mb-4"></p>
+
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">Services Offered</h3>
+                        <ul id="detail-services-list" class="space-y-2 mb-4">
+                            <!-- Services will be dynamically loaded here -->
+                        </ul>
+
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">Contact Information</h3>
+                        <p class="text-gray-700 text-base flex items-center mb-2">
+                            <!-- MapPin Icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-2 text-indigo-600"><path d="M12 18.312L6.155 12.467C2.983 9.324 2.983 4.168 6.155 1.025S14.845 1.025 18.017 4.168 18.017 9.324 14.845 12.467L12 18.312z"></path><circle cx="12" cy="7.5" r="2.5"></circle></svg>
+                            <span id="detail-address"></span>
+                        </p>
+                        <p class="text-gray-700 text-base flex items-center mb-4">
+                            <!-- Phone Icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-2 text-indigo-600"><path d="M22 16.92v3a2 2 0 0 1-2.18 2.05 15.66 15.66 0 0 1-8.53-8.53A15.66 15.66 0 0 1 2.05 4.18 2 2 0 0 1 2 2h3c.09 0 .18.01.27.03A10.74 10.74 0 0 0 7 3.5c.78.61 1.56 1.21 2.27 1.91l2.42 2.42a2 2 0 0 0 2.82 0l2.42-2.42c.7-.71 1.3-1.49 1.91-2.27A10.74 10.74 0 0 0 22 2.27V22Z"></path></svg>
+                            <span id="detail-phone"></span>
+                        </p>
+
+                        <button
+                            id="detail-book-now-btn"
+                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105 active:scale-95"
+                        >
+                            Book Service
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Bookings Page -->
+            <div id="my-bookings-page" class="page hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">My Bookings</h2>
+                <div id="my-bookings-list" class="space-y-4">
+                    <!-- Booking cards will be rendered here by JS -->
+                    <p class="text-center text-gray-500 py-8" id="no-bookings-message">No bookings found.</p>
+                </div>
+            </div>
+
+            <!-- Profile Page -->
+            <div id="profile-page" class="page hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Profile</h2>
+                <div id="profile-content" class="bg-white rounded-xl shadow-md p-6 space-y-4">
+                    <!-- Profile content will be rendered here dynamically -->
+                </div>
+                 <button
+                    id="open-ai-chat-btn"
+                    class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-lg transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex items-center justify-center"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle-code mr-2"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path><path d="M10 8h.01"></path><path d="M14 8h.01"></path><path d="m16 12-2 2-2-2"></path></svg>
+                    ? AI Support Chat
+                </button>
+            </div>
+        </div>
+
+        <!-- Booking Modal -->
+        <div id="booking-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+            <div id="booking-modal-content" class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md transform transition-all duration-300 scale-95 md:scale-100 flex flex-col">
+                <div class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+                    <h2 id="modal-provider-name" class="text-2xl font-bold text-gray-900"></h2>
+                    <button id="close-booking-modal" class="text-gray-500 hover:text-gray-700 transition duration-200">
+                        <!-- X Icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M18 6L6 18"></path><path d="M6 6L18 18"></path></svg>
+                    </button>
+                </div>
+
+                <div class="space-y-4 flex-grow">
+                    <div>
+                        <label for="service-select" class="block text-sm font-medium text-gray-700 mb-1">Select Service:</label>
+                        <select
+                            id="service-select"
+                            class="w-full bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm outline-none text-gray-800 text-lg"
+                        >
+                            <!-- Services will be populated by JS -->
+                        </select>
+                        <p id="service-price-display" class="text-gray-700 text-lg font-semibold mt-2 hidden">
+                            Price: <span id="selected-service-price" class="text-indigo-600"></span>
+                        </p>
+                    </div>
+
+                    <div class="flex items-center bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+                        <!-- Calendar Icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-indigo-600 mr-3"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <input
+                            type="date"
+                            id="booking-date"
+                            class="flex-grow bg-transparent outline-none text-gray-800 text-lg"
+                        />
+                    </div>
+
+                    <div class="flex items-center bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+                        <!-- Clock Icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-indigo-600 mr-3"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <select
+                            id="booking-time"
+                            class="flex-grow bg-transparent outline-none text-gray-800 text-lg"
+                        >
+                            <!-- Time slots will be populated by JS -->
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="customer-name" class="block text-sm font-medium text-gray-700 mb-1">Your Name:</label>
+                        <input
+                            type="text"
+                            id="customer-name"
+                            class="w-full bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm outline-none focus:border-indigo-500 focus:ring-indigo-500 text-gray-800"
+                            placeholder="Your full name"
+                        />
+                    </div>
+                    <div>
+                        <label for="customer-contact" class="block text-sm font-medium text-gray-700 mb-1">Your Contact Number:</label>
+                        <input
+                            type="tel"
+                            id="customer-contact"
+                            class="w-full bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm outline-none focus:border-indigo-500 focus:ring-indigo-500 text-gray-800"
+                            placeholder="e.g., 9876543210"
+                        />
+                    </div>
+                    <div>
+                        <label for="special-requests" class="block text-sm font-medium text-gray-700 mb-1">Special Requests (Optional):</label>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <textarea
+                                id="special-requests"
+                                rows="3"
+                                class="w-full bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm outline-none focus:border-indigo-500 focus:ring-indigo-500 text-gray-800"
+                                placeholder="e.g., any special instructions"
+                            ></textarea>
+                            <button
+                                id="ai-enhance-request-btn"
+                                class="flex-shrink-0 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 text-sm flex items-center justify-center whitespace-nowrap"
+                            >
+                                ? AI Suggestion
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <button
+                    id="confirm-booking-btn"
+                    class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 active:scale-95 text-xl"
+                >
+                    Confirm Booking
+                </button>
+            </div>
+        </div>
+
+        <!-- Message Modal (Confirmation/Error) -->
+        <div id="message-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+            <div id="message-modal-content" class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm text-center border-2 transform transition-all duration-300 scale-95 md:scale-100">
+                <div id="message-icon" class="flex justify-center mb-3"></div>
+                <h3 id="message-title" class="text-xl font-bold mb-2"></h3>
+                <p id="message-text" class="text-gray-700 mb-4"></p>
+                <p id="booking-id-text" class="text-sm font-medium text-gray-600 hidden">Booking ID: <span id="booking-id-value" class="font-mono"></span></p>
+                <button
+                    id="close-message-modal"
+                    class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-200 ease-in-out"
+                >
+                    OK
+                </button>
+            </div>
+        </div>
+
+        <!-- AI Chat Modal -->
+        <div id="ai-chat-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+            <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md h-[80vh] flex flex-col transform transition-all duration-300 scale-95 md:scale-100">
+                <div class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-900">AI Support Chat</h2>
+                    <button id="close-ai-chat-modal" class="text-gray-500 hover:text-gray-700 transition duration-200">
+                        <!-- X Icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M18 6L6 18"></path><path d="M6 6L18 18"></path></svg>
+                    </button>
+                </div>
+
+                <div id="chat-messages" class="flex-grow overflow-y-auto space-y-3 p-2 bg-gray-50 rounded-lg mb-4 custom-scrollbar">
+                    <!-- Chat messages will be appended here -->
+                    <div class="flex justify-start">
+                        <div class="chat-message-bubble ai">Hello! How can I help you today?</div>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <input
+                        type="text"
+                        id="chat-input"
+                        placeholder="Type your message..."
+                        class="flex-grow p-3 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500 transition duration-200 ease-in-out shadow-sm"
+                    />
+                    <button
+                        id="send-chat-btn"
+                        class="flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition duration-200 ease-in-out transform hover:scale-105 active:scale-95"
+                    >
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Bottom Navigation Bar -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-white shadow-xl border-t border-gray-200 z-40">
+            <div class="flex justify-around items-center h-16 max-w-lg mx-auto">
+                <button id="nav-home" class="nav-item flex flex-col items-center justify-center p-2 text-gray-500 hover:text-indigo-600 transition-colors duration-200 active">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-home w-6 h-6 mb-1"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    <span class="text-xs font-medium">Home</span>
+                </button>
+                <button id="nav-bookings" class="nav-item flex flex-col items-center justify-center p-2 text-gray-500 hover:text-indigo-600 transition-colors duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open-check w-6 h-6 mb-1"><path d="M8 2H20a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"></path><path d="M12 7h4"></path><path d="M12 12h4"></path><path d="M12 17h4"></path><path d="M6 2v20"></path><path d="m15 7 2 2 4-4"></path></svg>
+                    <span class="text-xs font-medium">My Bookings</span>
+                </button>
+                <button id="nav-profile" class="nav-item flex flex-col items-center justify-center p-2 text-gray-500 hover:text-indigo-600 transition-colors duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user w-6 h-6 mb-1"><circle cx="12" cy="7" r="4"></circle><path d="M12 20v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><path d="M22 20v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    <span class="text-xs font-medium">Profile</span>
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <script type="module">
+        // Firebase SDK imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+            let currentUserId = null;
+            let currentAuth = null; // Store auth instance
+            let currentDb = null;   // Store firestore instance
+            let isAuthReady = false;
+
+            // Chat history for AI chatbot
+            let chatHistory = [];
+
+            // Helper function to safely encode SVG for Base64, handling Unicode characters (emojis)
+            function btoaSafe(str) {
+                // Convert string to UTF-8 bytes
+                const utf8Bytes = new TextEncoder().encode(str);
+                // Convert UTF-8 bytes to a "binary string" (where each character is a byte value)
+                const binaryString = String.fromCharCode.apply(null, utf8Bytes);
+                // Base64 encode the binary string
+                return btoa(binaryString);
+            }
+            
+            // Mock Service Data with EMOJI-BASED SVG ICONS
+            const servicesData = [
+                {
+                    id: 'cat-clean-care',
+                    name: 'Clean & Care',
+                    image: `data:image/svg+xml;base64,${btoaSafe('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="50" font-family="sans-serif">??</text></svg>')}`, // Cleaning icon (Broom)
+                    providers: [
+                        {
+                            id: 'prov-sparkle',
+                            name: 'Sparkle Cleaners',
+                            rating: 4.7,
+                            reviews: 180,
+                            distance: 1.2,
+                            image: 'https://placehold.co/400x200/E0FFFF/333333?text=Sparkle+Cleaners',
+                            logo: 'https://placehold.co/60x60/99F6E4/333333?text=SC',
+                            description: 'Professional cleaning services to make your home sparkling and spotless.',
+                            services: [
+                                { name: 'Deep Cleaning (2BHK)', price: 4000, id: 's-deep2bhk' },
+                                { name: 'Regular Cleaning (1BHK)', price: 1500, id: 's-reg1bhk' },
+                                { name: 'Washroom Cleaning', price: 800, id: 's-washroom' }
+                            ],
+                            availableSlots: ['09:00 AM', '12:00 PM', '03:00 PM'],
+                            address: '50, Green Avenue, Ghaziabad',
+                            phone: '+91 7766554433'
+                        },
+                        {
+                            id: 'prov-fresh',
+                            name: 'Fresh Homes',
+                            rating: 4.8,
+                            reviews: 210,
+                            distance: 2.8,
+                            image: 'https://placehold.co/400x200/F0FFF0/333333?text=Fresh+Homes',
+                            logo: 'https://placehold.co/60x60/BAE6FD/333333?text=FH',
+                            description: 'Comprehensive home cleaning solutions for a fresh and comfortable environment.',
+                            services: [
+                                { name: 'Sofa Cleaning', price: 1800, id: 's-sofa' },
+                                { name: 'Kitchen Deep Cleaning', price: 3000, id: 's-kitchen' }
+                            ],
+                            availableSlots: ['10:00 AM', '01:00 PM', '04:00 PM'],
+                            address: '15, Shanti Puram, Ghaziabad',
+                            phone: '+91 9900112233'
+                        }
+                    ]
+                },
+                {
+                    id: 'cat-wash-shine',
+                    name: 'Wash & Shine',
+                    image: `data:image/svg+xml;base64,${btoaSafe('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="50" font-family="sans-serif">??</text></svg>')}`, // Car icon
+                    providers: [
+                        {
+                            id: 'prov-auto',
+                            name: 'Auto Fix Center',
+                            rating: 4.5,
+                            reviews: 320,
+                            distance: 2.1,
+                            image: 'https://placehold.co/400x200/FFFACD/333333?text=Auto+Fix+Center',
+                            logo: 'https://placehold.co/60x60/FCD34D/333333?text=AF',
+                            description: 'Reliable and efficient repair services for all types of cars.',
+                            services: [
+                                { name: 'Engine Tune-up', price: 2500, id: 's-engine' },
+                                { name: 'Tyre Rotation', price: 400, id: 's-tire' },
+                                { name: 'Brake Service', price: 1500, id: 's-brake' }
+                            ],
+                            availableSlots: ['09:00 AM', '10:30 AM', '01:00 PM', '02:30 PM'],
+                            address: '25, Industrial Area, Ghaziabad',
+                            phone: '+91 8877665544'
+                        },
+                        {
+                            id: 'prov-speedy',
+                            name: 'Speedy Auto Service',
+                            rating: 4.2,
+                            reviews: 180,
+                            distance: 3.5,
+                            image: 'https://placehold.co/400x200/E6FFFA/333333?text=Speedy+Auto+Service',
+                            logo: 'https://placehold.co/60x60/6EE7B7/333333?text=SA',
+                            description: 'Fast and efficient vehicle maintenance services.',
+                            services: [
+                                { name: 'Oil Change', price: 800, id: 's-oil' },
+                                { name: 'Battery Checkup', price: 200, id: 's-battery' },
+                                { name: 'General Service', price: 2000, id: 's-gen' }
+                            ],
+                            availableSlots: ['09:00 AM', '11:00 AM', '01:00 PM', '03:00 PM'],
+                            address: '3, GT Road, Ghaziabad',
+                            phone: '+91 7766554433'
+                        }
+                    ]
+                },
+                {
+                    id: 'cat-salon',
+                    name: 'Salon',
+                    image: `data:image/svg+xml;base64,${btoaSafe('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="50" font-family="sans-serif">?????</text></svg>')}`, // Salon icon
+                    providers: [
+                        {
+                            id: 'prov-glam',
+                            name: 'Glam Studio',
+                            rating: 4.9,
+                            reviews: 500,
+                            distance: 0.7, // km
+                            image: 'https://placehold.co/400x200/F0F8FF/333333?text=Glam+Studio',
+                            logo: 'https://placehold.co/60x60/8B5CF6/FFFFFF?text=GS',
+                            description: 'A premium salon offering high-quality services like haircuts, facials, and manicures.',
+                            services: [
+                                { name: 'Haircut', price: 500, id: 's-hc' },
+                                { name: 'Facial', price: 1200, id: 's-fac' },
+                                { name: 'Manicure', price: 800, id: 's-mani' }
+                            ],
+                            availableSlots: ['10:00 AM', '11:00 AM', '12:00 PM', '02:00 PM', '03:00 PM'],
+                            address: '10, Civil Lines, Ghaziabad',
+                            phone: '+91 9988776655'
+                        },
+                        {
+                            id: 'prov-beauty',
+                            name: 'Beauty Heaven',
+                            rating: 4.6,
+                            reviews: 420,
+                            distance: 1.8,
+                            image: 'https://placehold.co/400x200/FCE4EC/333333?text=Beauty+Heaven',
+                            logo: 'https://placehold.co/60x60/EC4899/FFFFFF?text=BH',
+                            description: 'A tranquil place for various beauty treatments and makeup services.',
+                            services: [
+                                { name: 'Hair Styling', price: 700, id: 's-hs' },
+                                { name: 'Pedicure', price: 900, id: 's-pedi' },
+                                { name: 'Party Makeup', price: 3000, id: 's-makeup' }
+                            ],
+                            availableSlots: ['09:30 AM', '11:30 AM', '01:30 PM', '04:00 PM'],
+                            address: '22, Raj Nagar, Ghaziabad',
+                            phone: '+91 9876123456'
+                        }
+                    ]
+                },
+                { // Added a dummy category for more options, with illustrative icons
+                    id: 'cat-plumbing',
+                    name: 'Plumbing',
+                    image: `data:image/svg+xml;base64,${btoaSafe('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="50" font-family="sans-serif">??</text></svg>')}`, // Wrench icon
+                    providers: []
+                },
+                {
+                    id: 'cat-electrician',
+                    name: 'Electrician',
+                    image: `data:image/svg+xml;base64,${btoaSafe('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="50" font-family="sans-serif">?</text></svg>')}`, // Lightning icon
+                    providers: []
+                },
+                {
+                    id: 'cat-pest-control',
+                    name: 'Pest Control',
+                    image: `data:image/svg+xml;base64,${btoaSafe('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="50" font-family="sans-serif">??</text></svg>')}`, // Ant icon
+                    providers: []
+                },
+                {
+                    id: 'cat-appliance-repair',
+                    name: 'Appliance Repair',
+                    image: `data:image/svg+xml;base64,${btoaSafe('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="50" font-family="sans-serif">??</text></svg>')}`, // Gear icon
+                    providers: []
+                },
+                {
+                    id: 'cat-gardening',
+                    name: 'Gardening',
+                    image: `data:image/svg+xml;base64,${btoaSafe('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="50" font-family="sans-serif">??</text></svg>')}`, // Tree icon
+                    providers: []
+                },
+                {
+                    id: 'cat-painting',
+                    name: 'Painting',
+                    image: `data:image/svg+xml;base64,${btoaSafe('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="50" font-family="sans-serif">??</text></svg>')}`, // Paint palette icon
+                    providers: []
+                }
+            ];
+
+            // Set initial selected category to "Clean & Care"
+            let currentSelectedCategory = servicesData[0].id; // Default to first category which is "Clean & Care"
+            let selectedProviderForBooking = null;
+            let currentSelectedService = null;
+
+            // DOM Elements
+            const searchInput = document.getElementById('search-input'); // This is now visible again
+            const categoryGrid = document.getElementById('category-grid'); // New element for category grid
+            const providerListTitle = document.getElementById('provider-list-title');
+            const providerList = document.getElementById('provider-list');
+            const noProvidersMessage = document.getElementById('no-providers-message');
+            const bookingModal = document.getElementById('booking-modal');
+            const modalProviderName = document.getElementById('modal-provider-name');
+            const closeBookingModalBtn = document.getElementById('close-booking-modal');
+            const serviceSelect = document.getElementById('service-select');
+            const servicePriceDisplay = document.getElementById('service-price-display');
+            const selectedServicePrice = document.getElementById('selected-service-price');
+            const bookingDateInput = document.getElementById('booking-date');
+            const bookingTimeSelect = document.getElementById('booking-time');
+            const customerNameInput = document.getElementById('customer-name');
+            const customerContactInput = document.getElementById('customer-contact');
+            const specialRequestsTextarea = document.getElementById('special-requests');
+            const confirmBookingBtn = document.getElementById('confirm-booking-btn'); 
+            const aiEnhanceRequestBtn = document.getElementById('ai-enhance-request-btn');
+            const messageModal = document.getElementById('message-modal');
+            const messageModalContent = document.getElementById('message-modal-content');
+            const messageIcon = document.getElementById('message-icon');
+            const messageTitle = document.getElementById('message-title');
+            const messageText = document.getElementById('message-text');
+            const bookingIdText = document.getElementById('booking-id-text');
+            const bookingIdValue = document.getElementById('booking-id-value');
+            const closeMessageModalBtn = document.getElementById('close-message-modal');
+            const profileContent = document.getElementById('profile-content');
+            const myBookingsList = document.getElementById('my-bookings-list');
+            const noBookingsMessage = document.getElementById('no-bookings-message');
+            const openAiChatBtn = document.getElementById('open-ai-chat-btn');
+            const aiChatModal = document.getElementById('ai-chat-modal');
+            const closeAiChatModalBtn = document.getElementById('close-ai-chat-modal');
+            const chatMessagesDiv = document.getElementById('chat-messages');
+            const chatInput = document.getElementById('chat-input');
+            const sendChatBtn = document.getElementById('send-chat-btn');
+
+            // Detail Page Elements
+            const detailPage = document.getElementById('detail-page');
+            const backToHomeBtn = document.getElementById('back-to-home-btn');
+            const detailCoverImage = document.getElementById('detail-cover-image');
+            const detailLogoImage = document.getElementById('detail-logo-image');
+            const detailProviderName = document.getElementById('detail-provider-name');
+            const detailRating = document.getElementById('detail-rating');
+            const detailReviews = document.getElementById('detail-reviews');
+            const detailDescription = document.getElementById('detail-description');
+            const detailServicesList = document.getElementById('detail-services-list');
+            const detailAddress = document.getElementById('detail-address');
+            const detailPhone = document.getElementById('detail-phone');
+            const detailBookNowBtn = document.getElementById('detail-book-now-btn');
+
+
+            // Navigation Elements
+            const navHomeBtn = document.getElementById('nav-home');
+            const navBookingsBtn = document.getElementById('nav-bookings');
+            const navProfileBtn = document.getElementById('nav-profile');
+            const homePage = document.getElementById('home-page');
+            const myBookingsPage = document.getElementById('my-bookings-page');
+            const profilePage = document.getElementById('profile-page');
+            const navItems = document.querySelectorAll('.nav-item');
+
+            let currentSearchTerm = '';
+
+            // Utility Functions for Icons
+            function getStarIcon(className = '') {
+                return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${className}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+            }
+
+            // Function to get today's date inYYYY-MM-DD format
+            function getTodayDateString() {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = (today.getMonth() + 1).toString().padStart(2, '0');
+                const day = today.getDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            // --- Page Navigation Logic ---
+            function showPage(pageId, provider = null) {
+                document.querySelectorAll('.page').forEach(page => {
+                    page.classList.add('hidden');
+                });
+                document.getElementById(pageId).classList.remove('hidden');
+
+                navItems.forEach(item => {
+                    item.classList.remove('active');
+                });
+                // Only activate nav item if it's one of the main tabs (home, bookings, profile)
+                const navId = `nav-${pageId.replace('-page', '')}`;
+                if (document.getElementById(navId)) {
+                    document.getElementById(navId).classList.add('active');
+                }
+
+
+                // Render content specific to the page
+                if (pageId === 'home-page') {
+                    renderCategoryGrid(); // Render categories as a grid
+                    renderProviders(); // Render providers for the selected category
+                } else if (pageId === 'my-bookings-page') {
+                    if (isAuthReady && currentUserId && currentDb) {
+                        fetchAndRenderBookings(); // Fetch from Firestore
+                    } else {
+                        myBookingsList.innerHTML = '<p class="text-center text-gray-500 py-8">Please log in or wait for authentication to view your bookings.</p>';
+                    }
+                } else if (pageId === 'profile-page') {
+                    renderProfilePage(currentAuth ? currentAuth.currentUser : null);
+                } else if (pageId === 'detail-page' && provider) {
+                    renderDetailPage(provider);
+                }
+            }
+
+            // Render Category Grid (New function)
+            function renderCategoryGrid() {
+                categoryGrid.innerHTML = '';
+                servicesData.forEach(category => {
+                    const button = document.createElement('button');
+                    button.className = `category-grid-item ${currentSelectedCategory === category.id ? 'active' : ''}`;
+                    // The category image (emoji SVG) will be displayed here, acting as an icon
+                    button.innerHTML = `
+                        <img src="${category.image}" alt="${category.name}" class="w-12 h-12 mb-2 object-contain">
+                        <span class="text-sm font-semibold text-gray-800">${category.name}</span>
+                    `;
+                    button.dataset.categoryId = category.id;
+                    button.addEventListener('click', () => {
+                        currentSelectedCategory = category.id;
+                        renderCategoryGrid(); // Re-render to update active state
+                        currentSearchTerm = ''; // Clear search when changing category
+                        searchInput.value = ''; // Clear search input value
+                        renderProviders(); // Re-render providers for new category
+                    });
+                    categoryGrid.appendChild(button);
+                });
+            }
+
+            // Render Service Providers (Home Page Listing)
+            function renderProviders() {
+                // Ensure the search input is visible and its value is used for filtering
+                if (searchInput) {
+                    searchInput.classList.remove('hidden');
+                }
+
+                let allProviders = [];
+                servicesData.forEach(category => {
+                    allProviders = allProviders.concat(category.providers);
+                });
+
+                let providersToDisplay = [];
+                if (currentSearchTerm) {
+                    // If there's a search term, search across all providers
+                    providersToDisplay = allProviders.filter(p =>
+                        p.name.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
+                        p.services.some(s => s.name.toLowerCase().includes(currentSearchTerm.toLowerCase()))
+                    );
+                    providerListTitle.textContent = `Search Results for "${currentSearchTerm}"`;
+                } else {
+                    // If no search term, show providers for the selected category
+                    const selectedCategory = servicesData.find(cat => cat.id === currentSelectedCategory);
+                    if (selectedCategory) {
+                        providersToDisplay = selectedCategory.providers;
+                        providerListTitle.textContent = `Providers for ${selectedCategory.name}`;
+                    } else {
+                        providerListTitle.textContent = 'No Category Selected'; // Should not happen with default selection
+                    }
+                }
+
+                // Sort by nearest distance (applies to both search results and category view)
+                providersToDisplay.sort((a, b) => a.distance - b.distance);
+
+                providerList.innerHTML = '';
+                if (providersToDisplay.length === 0) {
+                    noProvidersMessage.classList.remove('hidden');
+                    // Adjust message based on whether search was active
+                    noProvidersMessage.textContent = currentSearchTerm ?
+                        `No services or providers found for "${currentSearchTerm}".` :
+                        `No providers found for the selected category.`;
+                } else {
+                    noProvidersMessage.classList.add('hidden');
+                    providersToDisplay.forEach(provider => {
+                        const card = document.createElement('div');
+                        // Make the entire card clickable to go to detail page
+                        card.className = 'bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 cursor-pointer hover:shadow-xl transition-all duration-200';
+                        card.dataset.providerId = provider.id; // Store provider ID on the card
+                        card.innerHTML = `
+                            <img src="${provider.image}" alt="${provider.name}" class="w-full h-48 object-cover" onerror="this.onerror=null; this.src='https://placehold.co/400x200/cccccc/333333?text=${encodeURIComponent(provider.name)}';">
+                            <div class="p-4 flex flex-col">
+                                <h3 class="text-xl font-bold text-gray-900 mb-1">${provider.name}</h3>
+                                <div class="flex items-center text-yellow-500 text-sm mb-3">
+                                    ${getStarIcon('w-4 h-4 fill-current mr-1')}
+                                    <span>${provider.rating} (${provider.reviews} reviews)</span>
+                                    <span class="ml-auto text-gray-600 flex items-center">
+                                        <!-- MapPin Icon -->
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 mr-1"><path d="M12 18.312L6.155 12.467C2.983 9.324 2.983 4.168 6.155 1.025S14.845 1.025 18.017 4.168 18.017 9.324 14.845 12.467L12 18.312z"></path><circle cx="12" cy="7.5" r="2.5"></circle></svg>
+                                        ${provider.distance} km away
+                                    </span>
+                                </div>
+                                <p class="text-gray-600 text-sm">${provider.description}</p>
+                            </div>
+                        `;
+                        // Attach event listener to the card itself
+                        card.addEventListener('click', (event) => {
+                            const providerId = event.currentTarget.dataset.providerId;
+                            // Find the provider from allProviders instead, as search can return providers from any category
+                            const provider = allProviders.find(p => p.id === providerId); 
+
+                            if (provider) {
+                                showPage('detail-page', provider);
+                            }
+                        });
+                        providerList.appendChild(card);
+                    });
+                }
+                console.log("Current Search Term:", currentSearchTerm);
+                console.log("Filtered Providers Count:", providersToDisplay.length);
+            }
+
+            // Render Provider Detail Page
+            function renderDetailPage(provider) {
+                selectedProviderForBooking = provider; // Set for booking modal to use
+
+                detailCoverImage.src = provider.image;
+                detailLogoImage.src = provider.logo || provider.image; // Use logo if available, else cover image
+                detailProviderName.textContent = provider.name;
+                detailRating.textContent = provider.rating;
+                detailReviews.textContent = provider.reviews;
+                detailDescription.textContent = provider.description;
+                detailAddress.textContent = provider.address;
+                detailPhone.textContent = provider.phone;
+
+                detailServicesList.innerHTML = '';
+                provider.services.forEach(service => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200';
+                    listItem.innerHTML = `
+                        <span class="text-gray-800 font-medium">${service.name}</span>
+                        <span class="text-indigo-600 font-semibold">?${service.price}</span>
+                    `;
+                    detailServicesList.appendChild(listItem);
+                });
+
+                // Attach event listener to the "Book Now" button on detail page
+                detailBookNowBtn.onclick = () => openBookingModal(provider);
+            }
+
+            // Render My Bookings Page from Firestore
+            function fetchAndRenderBookings() {
+                myBookingsList.innerHTML = ''; // Clear previous content
+                noBookingsMessage.classList.add('hidden'); // Hide "no bookings" message initially
+
+                if (!currentDb || !currentUserId) {
+                    myBookingsList.innerHTML = '<p class="text-center text-gray-500 py-8">Please log in to view your bookings.</p>';
+                    return;
+                }
+
+                // Path for user-specific private data
+                const bookingsCollectionRef = collection(currentDb, `artifacts/${appId}/users/${currentUserId}/bookings`);
+                
+                // Set up real-time listener
+                onSnapshot(bookingsCollectionRef, (snapshot) => {
+                    myBookingsList.innerHTML = ''; // Clear content again for real-time updates
+                    if (snapshot.empty) {
+                        noBookingsMessage.classList.remove('hidden');
+                        return;
+                    }
+
+                    snapshot.forEach(doc => {
+                        const booking = doc.data();
+                        const bookingCard = document.createElement('div');
+                        const statusColor = booking.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700';
+                        bookingCard.className = `bg-white rounded-xl shadow-lg p-4 border border-gray-200 flex flex-col space-y-2`;
+                        bookingCard.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-lg font-bold text-gray-900">${booking.serviceName}</h3>
+                                <span class="text-sm font-semibold px-3 py-1 rounded-full ${statusColor}">${booking.status === 'Confirmed' ? 'Confirmed' : 'Completed'}</span>
+                            </div>
+                            <p class="text-gray-700">Provider: <span class="font-medium">${booking.providerName}</span></p>
+                            <p class="text-gray-700">Date: <span class="font-medium">${booking.date}</span></p>
+                            <p class="text-gray-700">Time: <span class="font-medium">${booking.time}</span></p>
+                            <p class="text-gray-600 text-xs">Booking ID: ${doc.id}</p>
+                        `;
+                        myBookingsList.appendChild(bookingCard);
+                    });
+                }, (error) => {
+                    console.error("Error fetching bookings:", error);
+                    myBookingsList.innerHTML = '<p class="text-center text-red-500 py-8">Error fetching bookings.</p>';
+                });
+            }
+
+            // Render Profile Page based on auth state
+            function renderProfilePage(user) {
+                profileContent.innerHTML = ''; // Clear existing content
+
+                if (user) {
+                    profileContent.innerHTML = `
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">User ID:</label>
+                            <p class="text-lg text-gray-900 font-semibold break-all">${user.uid}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Email:</label>
+                            <p class="text-lg text-gray-900">${user.email || 'N/A (Anonymous User)'}</p>
+                        </div>
+                        <button id="logout-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-200 ease-in-out">
+                            Log Out
+                        </button>
+                    `;
+                    document.getElementById('logout-btn').addEventListener('click', async () => {
+                        try {
+                            await signOut(currentAuth);
+                            showMessageModal('success', 'Logout Successful', 'You have been successfully logged out.');
+                        } catch (error) {
+                            console.error("Error logging out:", error);
+                            showMessageModal('error', 'Logout Failed', `Error logging out: ${error.message}`);
+                        }
+                    });
+                } else {
+                    profileContent.innerHTML = `
+                        <form id="login-form" class="space-y-4">
+                            <div>
+                                <label for="login-email" class="block text-sm font-medium text-gray-700">Email:</label>
+                                <input type="email" id="login-email" placeholder="email@example.com" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
+                            </div>
+                            <div>
+                                <label for="login-password" class="block text-sm font-medium text-gray-700">Password:</label>
+                                <input type="password" id="login-password" placeholder="******" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
+                            </div>
+                            <button type="submit" id="login-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-200 ease-in-out">
+                                Log In
+                            </button>
+                            <button type="button" id="signup-btn" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-200 ease-in-out">
+                                Sign Up
+                            </button>
+                        </form>
+                    `;
+
+                    document.getElementById('login-form').addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const email = document.getElementById('login-email').value;
+                        const password = document.getElementById('login-password').value;
+                        try {
+                            await signInWithEmailAndPassword(currentAuth, email, password);
+                            showMessageModal('success', 'Login Successful', 'You have been successfully logged in.');
+                        } catch (error) {
+                            console.error("Error signing in:", error);
+                            showMessageModal('error', 'Login Failed', `Error logging in: ${error.message}`);
+                        }
+                    });
+
+                    document.getElementById('signup-btn').addEventListener('click', async () => {
+                        const email = document.getElementById('login-email').value;
+                        const password = document.getElementById('login-password').value;
+                        try {
+                            await createUserWithEmailAndPassword(currentAuth, email, password);
+                            showMessageModal('success', 'Sign Up Successful', 'Your account has been created and you are logged in.');
+                        } catch (error) {
+                            console.error("Error signing up:", error);
+                            showMessageModal('error', 'Sign Up Failed', `Error signing up: ${error.message}`);
+                        }
+                    });
+                }
+            }
+
+            // Open Booking Modal
+            function openBookingModal(provider) {
+                selectedProviderForBooking = provider;
+                modalProviderName.textContent = provider.name;
+
+                // Populate service dropdown
+                serviceSelect.innerHTML = '';
+                provider.services.forEach(service => {
+                    const option = document.createElement('option');
+                    option.value = service.id;
+                    option.textContent = service.name;
+                    serviceSelect.appendChild(option);
+                });
+
+                // Select first service by default and display its price
+                if (provider.services.length > 0) {
+                    currentSelectedService = provider.services[0];
+                    servicePriceDisplay.classList.remove('hidden');
+                    selectedServicePrice.textContent = `?${currentSelectedService.price}`;
+                } else {
+                    servicePriceDisplay.classList.add('hidden');
+                }
+
+                // Populate time slots
+                bookingTimeSelect.innerHTML = '';
+                provider.availableSlots.forEach(slot => {
+                    const option = document.createElement('option');
+                    option.value = slot;
+                    option.textContent = slot;
+                    bookingTimeSelect.appendChild(option);
+                });
+
+                // Set min date for booking
+                bookingDateInput.value = getTodayDateString();
+                bookingDateInput.min = getTodayDateString();
+
+                // Reset other fields
+                customerNameInput.value = '';
+                customerContactInput.value = '';
+                specialRequestsTextarea.value = '';
+
+                bookingModal.classList.remove('hidden');
+            }
+
+            // Handle service selection change
+            serviceSelect.addEventListener('change', (event) => {
+                const serviceId = event.target.value;
+                currentSelectedService = selectedProviderForBooking.services.find(s => s.id === serviceId);
+                if (currentSelectedService) {
+                    selectedServicePrice.textContent = `?${currentSelectedService.price}`;
+                    servicePriceDisplay.classList.remove('hidden');
+                } else {
+                    servicePriceDisplay.classList.add('hidden');
+                }
+            });
+
+            // Close Booking Modal
+            function closeBookingModal() {
+                bookingModal.classList.add('hidden');
+            }
+
+            // Function to generate special request suggestions using Gemini API
+            async function callGeminiAPIForSpecialRequests() {
+                const originalRequest = specialRequestsTextarea.value.trim();
+                if (!originalRequest) {
+                    showMessageModal('info', 'No Request', 'Please write something for AI to suggest.');
+                    return;
+                }
+
+                aiEnhanceRequestBtn.textContent = 'Getting Suggestions...';
+                aiEnhanceRequestBtn.disabled = true;
+                aiEnhanceRequestBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+                try {
+                    let chatHistory = [];
+                    const prompt = `You are an AI assistant for a service booking app. The customer has written a special request. Please make it clearer and more professional for the service provider. Remove unnecessary sentences and write it as a concise instruction. The customer's request is: "${originalRequest}"`;
+                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                    const payload = { contents: chatHistory };
+                    const apiKey = ""; 
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const aiSuggestedText = result.candidates[0].content.parts[0].text;
+                        specialRequestsTextarea.value = aiSuggestedText;
+                        showMessageModal('success', 'AI Suggestion Received', 'Your request has been enhanced by AI.');
+                    } else {
+                        console.error('Gemini API response structure unexpected:', result);
+                        showMessageModal('error', 'AI Error', 'Failed to get AI suggestion. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error calling Gemini API:', error);
+                    showMessageModal('error', 'Network Error', 'Problem connecting to AI service.');
+                } finally {
+                    aiEnhanceRequestBtn.textContent = '? AI Suggestion';
+                    aiEnhanceRequestBtn.disabled = false;
+                    aiEnhanceRequestBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            }
+
+
+            // Handle Booking Confirmation (now saving to Firestore)
+            async function handleBookingConfirm() {
+                if (!isAuthReady || !currentUserId || !currentDb) {
+                    showMessageModal('error', 'Authentication Error', 'Authentication not ready or you are not logged in. Please log in and try again.');
+                    console.error("Firebase Auth or Firestore not ready.");
+                    return;
+                }
+
+                const service = currentSelectedService;
+                const date = bookingDateInput.value;
+                const time = bookingTimeSelect.value;
+                const customerName = customerNameInput.value.trim();
+                const customerContact = customerContactInput.value.trim();
+                const specialRequests = specialRequestsTextarea.value.trim();
+
+                if (!service || !date || !time || !customerName || !customerContact) {
+                    showMessageModal('error', 'Booking Failed', 'Please fill in all required booking details.');
+                    return;
+                }
+
+                const bookingData = {
+                    categoryId: currentSelectedCategory,
+                    categoryName: servicesData.find(cat => cat.id === currentSelectedCategory)?.name,
+                    providerId: selectedProviderForBooking.id,
+                    providerName: selectedProviderForBooking.name,
+                    serviceId: service.id,
+                    serviceName: service.name,
+                    servicePrice: service.price,
+                    date: date,
+                    time: time,
+                    customerName: customerName,
+                    customerContact: customerContact,
+                    specialRequests: specialRequests || 'None',
+                    userId: currentUserId, // Current authenticated user ID
+                    bookingTimestamp: new Date().toISOString(),
+                    status: 'Confirmed'
+                };
+
+                console.log('Attempting to save booking data to Firestore:', bookingData);
+
+                try {
+                    // Save to Firestore: artifacts/${appId}/users/${currentUserId}/bookings
+                    const docRef = await addDoc(collection(currentDb, `artifacts/${appId}/users/${currentUserId}/bookings`), bookingData);
+                    
+                    console.log('Booking saved to Firestore with ID:', docRef.id);
+                    showMessageModal('success', 'Booking Successful!', `Your ${service.name} service for ${selectedProviderForBooking.name} on ${date} at ${time} has been confirmed!`, docRef.id);
+
+                } catch (error) {
+                    console.error('Error saving booking to Firestore:', error);
+                    showMessageModal('error', 'Booking Failed', `Error saving booking: ${error.message}. Please try again.`);
+                }
+
+                closeBookingModal(); // Close modal after attempt
+            }
+
+            // Show Message Modal
+            function showMessageModal(status, title, message, bookingId = null) {
+                if (status === 'success') {
+                    messageModalContent.className = 'bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm text-center border-2 transform transition-all duration-300 scale-95 md:scale-100 bg-green-100 border-green-400 text-green-700';
+                    messageIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+                    messageTitle.className = 'text-xl font-bold mb-2 text-green-800';
+                    if (bookingId) {
+                        bookingIdText.classList.remove('hidden');
+                        bookingIdValue.textContent = bookingId;
+                    } else {
+                        bookingIdText.classList.add('hidden');
+                    }
+                } else {
+                    messageModalContent.className = 'bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm text-center border-2 transform transition-all duration-300 scale-95 md:scale-100 bg-red-100 border-red-400 text-red-700';
+                    messageIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+                    bookingIdText.classList.add('hidden');
+                }
+                messageTitle.textContent = title;
+                messageText.textContent = message;
+                messageModal.classList.remove('hidden');
+            }
+
+            // Close Message Modal
+            function closeMessageModal() {
+                messageModal.classList.add('hidden');
+            }
+
+            // --- AI Chatbot Logic ---
+            function openAiChatModal() {
+                aiChatModal.classList.remove('hidden');
+                chatInput.focus(); // Focus on input when modal opens
+                chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight; // Scroll to bottom
+            }
+
+            function closeAiChatModal() {
+                aiChatModal.classList.add('hidden');
+            }
+
+            function addChatMessage(role, text) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+                messageDiv.innerHTML = `<div class="chat-message-bubble ${role}">${text}</div>`;
+                chatMessagesDiv.appendChild(messageDiv);
+                chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight; // Auto scroll to bottom
+            }
+
+            async function sendChatMessage() {
+                const userMessage = chatInput.value.trim();
+                if (!userMessage) return;
+
+                addChatMessage('user', userMessage);
+                chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+                chatInput.value = ''; // Clear input
+
+                // Disable input and button while AI is thinking
+                chatInput.disabled = true;
+                sendChatBtn.disabled = true;
+                sendChatBtn.textContent = 'Sending...';
+
+                try {
+                    // Prepare chat history for Gemini API, including system instruction
+                    const chatPayloadHistory = [
+                        { role: "user", parts: [{ text: "You are an AI assistant chatbot for a service booking app. Answer questions concisely and helpfully. This app offers services like Salon Services, Car Repair, and Home Cleaning. Services are available in Ghaziabad." }] },
+                        { role: "model", parts: [{ text: "Hello! How can I help you today?" }] }, // Initial greeting
+                        ...chatHistory // Append current conversation history
+                    ];
+
+                    const payload = { contents: chatPayloadHistory };
+                    const apiKey = ""; 
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const aiResponse = result.candidates[0].content.parts[0].text;
+                        addChatMessage('ai', aiResponse);
+                        chatHistory.push({ role: "model", parts: [{ text: aiResponse }] });
+                    } else {
+                        console.error('Gemini API response structure unexpected for chat:', result);
+                        addChatMessage('ai', 'Sorry, I could not get an answer to your question. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error calling Gemini API for chat:', error);
+                    addChatMessage('ai', 'Network error or problem connecting to AI service.');
+                } finally {
+                    chatInput.disabled = false;
+                    sendChatBtn.disabled = false;
+                    sendChatBtn.textContent = 'Send';
+                }
+            }
+
+            // Event Listeners
+            // Search input is now visible, so its listener is critical
+            searchInput.addEventListener('input', (event) => {
+                currentSearchTerm = event.target.value;
+                renderProviders(); // Re-render providers based on search term
+            });
+
+            closeBookingModalBtn.addEventListener('click', closeBookingModal);
+            confirmBookingBtn.addEventListener('click', handleBookingConfirm);
+            closeMessageModalBtn.addEventListener('click', closeMessageModal);
+            aiEnhanceRequestBtn.addEventListener('click', callGeminiAPIForSpecialRequests);
+
+            // AI Chatbot Event Listeners
+            openAiChatBtn.addEventListener('click', openAiChatModal);
+            closeAiChatModalBtn.addEventListener('click', closeAiChatModal);
+            sendChatBtn.addEventListener('click', sendChatMessage);
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !sendChatBtn.disabled) {
+                    sendChatMessage();
+                }
+            });
+
+            // Detail Page Event Listeners
+            backToHomeBtn.addEventListener('click', () => showPage('home-page'));
+
+
+            // Bottom Navigation Event Listeners
+            navHomeBtn.addEventListener('click', () => showPage('home-page'));
+            navBookingsBtn.addEventListener('click', () => showPage('my-bookings-page'));
+            navProfileBtn.addEventListener('click', () => showPage('profile-page'));
+
+            // Close modals if clicked outside
+            bookingModal.addEventListener('click', (event) => {
+                if (event.target === bookingModal) {
+                    closeBookingModal();
+                }
+            });
+            messageModal.addEventListener('click', (event) => {
+                if (event.target === messageModal) {
+                    closeMessageModal();
+                }
+            });
+            aiChatModal.addEventListener('click', (event) => {
+                if (event.target === aiChatModal) {
+                    closeAiChatModal();
+                }
+            });
+
+            // Firebase Initialization
+            const initFirebase = async () => {
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    currentDb = getFirestore(app);
+                    currentAuth = getAuth(app);
+
+                    // Set up auth state observer
+                    onAuthStateChanged(currentAuth, (user) => {
+                        if (user) {
+                            currentUserId = user.uid;
+                            document.getElementById('user-id-value').textContent = currentUserId;
+                            document.getElementById('user-id-display').classList.remove('hidden');
+                            console.log("Firebase Auth Ready. User ID:", currentUserId);
+                            renderProfilePage(user); // Render profile based on user state
+                            isAuthReady = true;
+
+                            // If on "My Bookings" page and authenticated, fetch bookings
+                            if (!myBookingsPage.classList.contains('hidden')) {
+                                fetchAndRenderBookings();
+                            }
+                        } else {
+                            currentUserId = null;
+                            document.getElementById('user-id-value').textContent = 'Not authenticated';
+                            document.getElementById('user-id-display').classList.add('hidden');
+                            console.log("Firebase Auth: User logged out or not authenticated.");
+                            renderProfilePage(null); // Render profile for logged out state
+                            isAuthReady = false;
+                        }
+                    });
+
+                    // Initial sign-in attempt
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(currentAuth, initialAuthToken);
+                        console.log("Signed in with custom token.");
+                    } else {
+                        await signInAnonymously(currentAuth);
+                        console.log("Signed in anonymously.");
+                    }
+                } catch (error) {
+                    console.error("Firebase initialization or sign-in failed:", error);
+                    showMessageModal('error', 'Firebase Error', `Failed to initialize Firebase: ${error.message}`);
+                }
+            };
+
+            // Initial render - show home page by default
+            showPage('home-page');
+            // Call Firebase Initialization after DOM elements are defined and initial page shown
+            initFirebase();
+        });
+    </script>
+</body>
+</html>
