@@ -179,6 +179,10 @@
                 <div id="my-bookings-list" class="space-y-4">
                     <!-- Booking cards will be rendered here by JS -->
                     <p class="text-center text-gray-500 py-8" id="no-bookings-message">No bookings found.</p>
+                    <p class="text-center text-gray-500 py-8 text-sm">
+                        (Note: In this demo, bookings are simulated and not saved to a real external database.
+                        In a full application, this page would fetch bookings from your Google Sheet.)
+                    </p>
                 </div>
             </div>
 
@@ -187,6 +191,10 @@
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Profile</h2>
                 <div id="profile-content" class="bg-white rounded-xl shadow-md p-6 space-y-4">
                     <!-- Profile content will be rendered here dynamically -->
+                    <p class="text-gray-700 text-sm">
+                        (Note: User authentication is simulated in this demo.
+                        In a full application, this page would show actual user details from a centralized user management system or a database like Google Sheet.)
+                    </p>
                 </div>
                  <button
                     id="open-ai-chat-btn"
@@ -362,20 +370,15 @@
     </div>
 
     <script type="module">
-        // Firebase SDK imports
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
         document.addEventListener('DOMContentLoaded', () => {
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+            const appId = 'default-app-id'; // This would typically come from Canvas env, but we're simulating for Google Sheets.
+            // When running on GitHub Pages or locally, you can hardcode a user ID or generate one.
+            let currentUserId = 'user-' + crypto.randomUUID().substring(0, 8); // Simulate a user ID for demo purposes.
+            let isAuthReady = true; // Assume authenticated for this demo.
 
-            let currentUserId = null;
-            let currentAuth = null; // Store auth instance
-            let currentDb = null;   // Store firestore instance
-            let isAuthReady = false;
+            // Display the simulated user ID
+            document.getElementById('user-id-value').textContent = currentUserId;
+            document.getElementById('user-id-display').classList.remove('hidden');
 
             // Chat history for AI chatbot
             let chatHistory = [];
@@ -391,6 +394,7 @@
             }
             
             // Mock Service Data with EMOJI-BASED SVG ICONS
+            // In a real application, this data would be fetched from your Google Sheet via a backend.
             const servicesData = [
                 {
                     id: 'cat-clean-care',
@@ -662,13 +666,17 @@
                     renderCategoryGrid(); // Render categories as a grid
                     renderProviders(); // Render providers for the selected category
                 } else if (pageId === 'my-bookings-page') {
-                    if (isAuthReady && currentUserId && currentDb) {
-                        fetchAndRenderBookings(); // Fetch from Firestore
-                    } else {
-                        myBookingsList.innerHTML = '<p class="text-center text-gray-500 py-8">Please log in or wait for authentication to view your bookings.</p>';
-                    }
+                    // In a Google Sheets integration, this would typically involve fetching data from the sheet.
+                    // For this simulated demo, we'll show a message.
+                    myBookingsList.innerHTML = `
+                        <p class="text-center text-gray-500 py-8">
+                            This page would display your bookings fetched from your Google Sheet.<br>
+                            (Bookings in this demo are simulated and not persisted.)
+                        </p>
+                    `;
+                    noBookingsMessage.classList.add('hidden'); // Ensure hidden if content is replaced
                 } else if (pageId === 'profile-page') {
-                    renderProfilePage(currentAuth ? currentAuth.currentUser : null);
+                    renderProfilePage(); // Now uses a simulated user ID
                 } else if (pageId === 'detail-page' && provider) {
                     renderDetailPage(provider);
                 }
@@ -806,122 +814,18 @@
                 detailBookNowBtn.onclick = () => openBookingModal(provider);
             }
 
-            // Render My Bookings Page from Firestore
-            function fetchAndRenderBookings() {
-                myBookingsList.innerHTML = ''; // Clear previous content
-                noBookingsMessage.classList.add('hidden'); // Hide "no bookings" message initially
-
-                if (!currentDb || !currentUserId) {
-                    myBookingsList.innerHTML = '<p class="text-center text-gray-500 py-8">Please log in to view your bookings.</p>';
-                    return;
-                }
-
-                // Path for user-specific private data
-                const bookingsCollectionRef = collection(currentDb, `artifacts/${appId}/users/${currentUserId}/bookings`);
-                
-                // Set up real-time listener
-                onSnapshot(bookingsCollectionRef, (snapshot) => {
-                    myBookingsList.innerHTML = ''; // Clear content again for real-time updates
-                    if (snapshot.empty) {
-                        noBookingsMessage.classList.remove('hidden');
-                        return;
-                    }
-
-                    snapshot.forEach(doc => {
-                        const booking = doc.data();
-                        const bookingCard = document.createElement('div');
-                        const statusColor = booking.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700';
-                        bookingCard.className = `bg-white rounded-xl shadow-lg p-4 border border-gray-200 flex flex-col space-y-2`;
-                        bookingCard.innerHTML = `
-                            <div class="flex justify-between items-center">
-                                <h3 class="text-lg font-bold text-gray-900">${booking.serviceName}</h3>
-                                <span class="text-sm font-semibold px-3 py-1 rounded-full ${statusColor}">${booking.status === 'Confirmed' ? 'Confirmed' : 'Completed'}</span>
-                            </div>
-                            <p class="text-gray-700">Provider: <span class="font-medium">${booking.providerName}</span></p>
-                            <p class="text-gray-700">Date: <span class="font-medium">${booking.date}</span></p>
-                            <p class="text-gray-700">Time: <span class="font-medium">${booking.time}</span></p>
-                            <p class="text-gray-600 text-xs">Booking ID: ${doc.id}</p>
-                        `;
-                        myBookingsList.appendChild(bookingCard);
-                    });
-                }, (error) => {
-                    console.error("Error fetching bookings:", error);
-                    myBookingsList.innerHTML = '<p class="text-center text-red-500 py-8">Error fetching bookings.</p>';
-                });
-            }
-
-            // Render Profile Page based on auth state
-            function renderProfilePage(user) {
-                profileContent.innerHTML = ''; // Clear existing content
-
-                if (user) {
-                    profileContent.innerHTML = `
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">User ID:</label>
-                            <p class="text-lg text-gray-900 font-semibold break-all">${user.uid}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Email:</label>
-                            <p class="text-lg text-gray-900">${user.email || 'N/A (Anonymous User)'}</p>
-                        </div>
-                        <button id="logout-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-200 ease-in-out">
-                            Log Out
-                        </button>
-                    `;
-                    document.getElementById('logout-btn').addEventListener('click', async () => {
-                        try {
-                            await signOut(currentAuth);
-                            showMessageModal('success', 'Logout Successful', 'You have been successfully logged out.');
-                        } catch (error) {
-                            console.error("Error logging out:", error);
-                            showMessageModal('error', 'Logout Failed', `Error logging out: ${error.message}`);
-                        }
-                    });
-                } else {
-                    profileContent.innerHTML = `
-                        <form id="login-form" class="space-y-4">
-                            <div>
-                                <label for="login-email" class="block text-sm font-medium text-gray-700">Email:</label>
-                                <input type="email" id="login-email" placeholder="email@example.com" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
-                            </div>
-                            <div>
-                                <label for="login-password" class="block text-sm font-medium text-gray-700">Password:</label>
-                                <input type="password" id="login-password" placeholder="******" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
-                            </div>
-                            <button type="submit" id="login-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-200 ease-in-out">
-                                Log In
-                            </button>
-                            <button type="button" id="signup-btn" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-200 ease-in-out">
-                                Sign Up
-                            </button>
-                        </form>
-                    `;
-
-                    document.getElementById('login-form').addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        const email = document.getElementById('login-email').value;
-                        const password = document.getElementById('login-password').value;
-                        try {
-                            await signInWithEmailAndPassword(currentAuth, email, password);
-                            showMessageModal('success', 'Login Successful', 'You have been successfully logged in.');
-                        } catch (error) {
-                            console.error("Error signing in:", error);
-                            showMessageModal('error', 'Login Failed', `Error logging in: ${error.message}`);
-                        }
-                    });
-
-                    document.getElementById('signup-btn').addEventListener('click', async () => {
-                        const email = document.getElementById('login-email').value;
-                        const password = document.getElementById('login-password').value;
-                        try {
-                            await createUserWithEmailAndPassword(currentAuth, email, password);
-                            showMessageModal('success', 'Sign Up Successful', 'Your account has been created and you are logged in.');
-                        } catch (error) {
-                            console.error("Error signing up:", error);
-                            showMessageModal('error', 'Sign Up Failed', `Error signing up: ${error.message}`);
-                        }
-                    });
-                }
+            // Render Profile Page (simulated for Google Sheets integration)
+            function renderProfilePage() {
+                profileContent.innerHTML = `
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Simulated User ID:</label>
+                        <p class="text-lg text-gray-900 font-semibold break-all">${currentUserId}</p>
+                    </div>
+                    <p class="text-gray-700 text-sm mt-4">
+                        (Note: User authentication is simulated in this demo.
+                        In a full application, this page would show actual user details from a centralized user management system or a database like Google Sheet.)
+                    </p>
+                `;
             }
 
             // Open Booking Modal
@@ -1035,11 +939,11 @@
             }
 
 
-            // Handle Booking Confirmation (now saving to Firestore)
+            // Handle Booking Confirmation (Simulated Google Sheets Save)
             async function handleBookingConfirm() {
-                if (!isAuthReady || !currentUserId || !currentDb) {
+                if (!isAuthReady || !currentUserId) {
                     showMessageModal('error', 'Authentication Error', 'Authentication not ready or you are not logged in. Please log in and try again.');
-                    console.error("Firebase Auth or Firestore not ready.");
+                    console.error("Authentication not ready.");
                     return;
                 }
 
@@ -1056,37 +960,72 @@
                 }
 
                 const bookingData = {
-                    categoryId: currentSelectedCategory,
-                    categoryName: servicesData.find(cat => cat.id === currentSelectedCategory)?.name,
-                    providerId: selectedProviderForBooking.id,
-                    providerName: selectedProviderForBooking.name,
-                    serviceId: service.id,
-                    serviceName: service.name,
-                    servicePrice: service.price,
-                    date: date,
-                    time: time,
-                    customerName: customerName,
-                    customerContact: customerContact,
-                    specialRequests: specialRequests || 'None',
-                    userId: currentUserId, // Current authenticated user ID
-                    bookingTimestamp: new Date().toISOString(),
-                    status: 'Confirmed'
+                    "Booking ID": `BOOK-${Date.now()}`, // Generate unique ID
+                    "Category ID": currentSelectedCategory,
+                    "Category Name": servicesData.find(cat => cat.id === currentSelectedCategory)?.name,
+                    "Provider ID": selectedProviderForBooking.id,
+                    "Provider Name": selectedProviderForBooking.name,
+                    "Service ID": service.id,
+                    "Service Name": service.name,
+                    "Service Price": service.price,
+                    "Date": date,
+                    "Time": time,
+                    "Customer Name": customerName,
+                    "Customer Contact": customerContact,
+                    "Special Requests": specialRequests || 'None',
+                    "User ID": currentUserId,
+                    "Booking Timestamp": new Date().toISOString(),
+                    "Status": 'Confirmed'
                 };
 
-                console.log('Attempting to save booking data to Firestore:', bookingData);
+                console.log('Simulating saving booking data to Google Sheet:', bookingData);
 
-                try {
-                    // Save to Firestore: artifacts/${appId}/users/${currentUserId}/bookings
-                    const docRef = await addDoc(collection(currentDb, `artifacts/${appId}/users/${currentUserId}/bookings`), bookingData);
-                    
-                    console.log('Booking saved to Firestore with ID:', docRef.id);
-                    showMessageModal('success', 'Booking Successful!', `Your ${service.name} service for ${selectedProviderForBooking.name} on ${date} at ${time} has been confirmed!`, docRef.id);
+                // --- ACTUAL GOOGLE SHEETS INTEGRATION WOULD GO HERE ---
+                // To integrate with Google Sheets, you would typically set up a Google Apps Script
+                // or a backend server (e.g., Node.js with Express, Python with Flask) that
+                // exposes an API endpoint. Your frontend (this JavaScript) would then make a
+                // fetch request to that backend endpoint, sending the bookingData.
+                //
+                // Example Google Apps Script (publish as web app, set access to "Anyone, even anonymous"):
+                //
+                // function doPost(e) {
+                //   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Bookings"); // Your sheet name
+                //   var data = JSON.parse(e.postData.contents);
+                //   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+                //   var row = [];
+                //   for (var i = 0; i < headers.length; i++) {
+                //     row.push(data[headers[i]] || ''); // Map data to columns, handle missing
+                //   }
+                //   sheet.appendRow(row);
+                //   return ContentService.createTextOutput(JSON.stringify({ 'status': 'success', 'bookingId': data['Booking ID'] }))
+                //     .setMimeType(ContentService.MimeType.JSON);
+                // }
+                //
+                // Then, your fetch request here would be something like:
+                // try {
+                //     const response = await fetch('YOUR_DEPLOYED_APP_SCRIPT_URL', {
+                //         method: 'POST',
+                //         mode: 'cors', // Important for cross-origin requests
+                //         headers: {
+                //             'Content-Type': 'application/json',
+                //         },
+                //         body: JSON.stringify(bookingData)
+                //     });
+                //     const result = await response.json();
+                //     if (response.ok && result.status === 'success') {
+                //         showMessageModal('success', 'Booking Successful!', `Your ${service.name} service for ${selectedProviderForBooking.name} on ${date} at ${time} has been confirmed!`, result.bookingId);
+                //     } else {
+                //         showMessageModal('error', 'Booking Failed', `Error saving booking: ${result.message || 'Server error'}. Please try again.`);
+                //     }
+                // } catch (error) {
+                //     console.error('Error calling backend for Google Sheet:', error);
+                //     showMessageModal('error', 'Network Error', 'Problem connecting to booking service.');
+                // }
+                // --- END ACTUAL GOOGLE SHEETS INTEGRATION ---
 
-                } catch (error) {
-                    console.error('Error saving booking to Firestore:', error);
-                    showMessageModal('error', 'Booking Failed', `Error saving booking: ${error.message}. Please try again.`);
-                }
-
+                // Simulate success for demo purposes
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+                showMessageModal('success', 'Booking Successful!', `Your ${service.name} service for ${selectedProviderForBooking.name} on ${date} at ${time} has been confirmed!`, bookingData["Booking ID"]);
                 closeBookingModal(); // Close modal after attempt
             }
 
@@ -1237,62 +1176,8 @@
                 }
             });
 
-            // Firebase Initialization
-            const initFirebase = async () => {
-                try {
-                    // Check if firebaseConfig is valid and contains projectId
-                    if (!firebaseConfig || !firebaseConfig.projectId) {
-                        console.error("Firebase Configuration Error: 'projectId' not found in firebaseConfig.");
-                        showMessageModal('error', 'Firebase Initialization Error', "Firebase configuration is incomplete. 'projectId' is missing. Please ensure your environment variables are correctly set.");
-                        return; // Stop initialization if config is bad
-                    }
-
-                    const app = initializeApp(firebaseConfig);
-                    currentDb = getFirestore(app);
-                    currentAuth = getAuth(app);
-
-                    // Set up auth state observer
-                    onAuthStateChanged(currentAuth, (user) => {
-                        if (user) {
-                            currentUserId = user.uid;
-                            document.getElementById('user-id-value').textContent = currentUserId;
-                            document.getElementById('user-id-display').classList.remove('hidden');
-                            console.log("Firebase Auth Ready. User ID:", currentUserId);
-                            renderProfilePage(user); // Render profile based on user state
-                            isAuthReady = true;
-
-                            // If on "My Bookings" page and authenticated, fetch bookings
-                            if (!myBookingsPage.classList.contains('hidden')) {
-                                fetchAndRenderBookings();
-                            }
-                        } else {
-                            currentUserId = null;
-                            document.getElementById('user-id-value').textContent = 'Not authenticated';
-                            document.getElementById('user-id-display').classList.add('hidden');
-                            console.log("Firebase Auth: User logged out or not authenticated.");
-                            renderProfilePage(null); // Render profile for logged out state
-                            isAuthReady = false;
-                        }
-                    });
-
-                    // Initial sign-in attempt
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(currentAuth, initialAuthToken);
-                        console.log("Signed in with custom token.");
-                    } else {
-                        await signInAnonymously(currentAuth);
-                        console.log("Signed in anonymously.");
-                    }
-                } catch (error) {
-                    console.error("Firebase initialization or sign-in failed:", error);
-                    showMessageModal('error', 'Firebase Error', `Failed to initialize Firebase: ${error.message}`);
-                }
-            };
-
             // Initial render - show home page by default
             showPage('home-page');
-            // Call Firebase Initialization after DOM elements are defined and initial page shown
-            initFirebase();
         });
     </script>
 </body>
