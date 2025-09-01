@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chant Counter App</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -11,6 +12,8 @@
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
             color: #1f2937;
+            /* Prevents double-tap zoom on mobile */
+            touch-action: manipulation;
         }
         .main-container {
             display: flex;
@@ -174,6 +177,16 @@
             </div>
         </div>
 
+        <!-- Install Prompt Container -->
+        <div id="install-container" class="fixed bottom-20 left-1/2 -translate-x-1/2 hidden z-40">
+            <div class="bg-red-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center justify-between space-x-4">
+                <span class="text-sm font-medium">Install this app for offline use!</span>
+                <button id="install-button" class="bg-white text-red-600 font-bold py-1 px-4 rounded-full transition-colors hover:bg-gray-200">
+                    Install
+                </button>
+            </div>
+        </div>
+
     </main>
     
     <!-- Footer -->
@@ -226,6 +239,37 @@
                     });
             });
         }
+        
+        let deferredPrompt;
+        const installContainer = document.getElementById('install-container');
+        const installButton = document.getElementById('install-button');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later.
+            deferredPrompt = e;
+            // Show the custom install UI to the user
+            installContainer.classList.remove('hidden');
+        });
+
+        installButton.addEventListener('click', (e) => {
+            // Hide the install UI
+            installContainer.classList.add('hidden');
+            // Show the install prompt
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                // Wait for the user to respond to the prompt
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    } else {
+                        console.log('User dismissed the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        });
         
         document.addEventListener('DOMContentLoaded', () => {
             // DOM elements
